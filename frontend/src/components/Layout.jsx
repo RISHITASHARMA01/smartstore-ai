@@ -5,6 +5,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/products', label: 'Products' },
   { to: '/suppliers', label: 'Suppliers' },
+  { to: '/purchase-orders', label: 'Purchase Orders' },
 ]
 
 export default function Layout({ children }) {

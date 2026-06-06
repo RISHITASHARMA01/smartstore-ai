@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Products from './pages/Products'
 import Suppliers from './pages/Suppliers'
+import PurchaseOrders from './pages/PurchaseOrders'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -33,6 +34,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Suppliers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrders />
             </ProtectedRoute>
           }
         />
