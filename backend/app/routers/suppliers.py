@@ -5,8 +5,13 @@ from typing import Optional
 from ..database import get_db
 from ..models import Supplier
 from ..schemas.suppliers import SupplierCreate, SupplierUpdate, SupplierOut
+from ..auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/suppliers", tags=["suppliers"])
+router = APIRouter(
+    prefix="/suppliers",
+    tags=["suppliers"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/", response_model=list[SupplierOut])

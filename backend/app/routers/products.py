@@ -5,8 +5,13 @@ from typing import Optional
 from ..database import get_db
 from ..models import Product
 from ..schemas.products import ProductCreate, ProductUpdate, ProductOut
+from ..auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/products", tags=["products"])
+router = APIRouter(
+    prefix="/products",
+    tags=["products"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.get("/", response_model=list[ProductOut])

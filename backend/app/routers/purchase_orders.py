@@ -5,8 +5,13 @@ from typing import Optional
 from ..database import get_db
 from ..models import PurchaseOrder, POLineItem, Product, Supplier, StockHistory
 from ..schemas.purchase_orders import POCreate, POUpdate, POOut, VALID_STATUSES
+from ..auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
+router = APIRouter(
+    prefix="/purchase-orders",
+    tags=["purchase-orders"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def _load(po_id: int, db: Session) -> PurchaseOrder:
