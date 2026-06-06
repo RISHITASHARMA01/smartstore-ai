@@ -1,34 +1,16 @@
-import useAuthStore from '../store/authStore'
-import { useNavigate } from 'react-router-dom'
+import Layout from '../components/Layout'
 
 export default function Dashboard() {
-  const logout = useAuthStore((s) => s.logout)
-  const navigate = useNavigate()
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-blue-600">SmartStore AI</h1>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-500 hover:text-red-500 transition"
-        >
-          Logout
-        </button>
-      </nav>
-      <main className="p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h2>
+    <Layout>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Products', value: '—', color: 'blue' },
-            { label: 'Low Stock Alerts', value: '—', color: 'amber' },
-            { label: 'Expired Items', value: '—', color: 'red' },
-            { label: 'Suppliers', value: '—', color: 'green' },
+            { label: 'Total Products', value: '—' },
+            { label: 'Low Stock Alerts', value: '—' },
+            { label: 'Expired Items', value: '—' },
+            { label: 'Suppliers', value: '—' },
           ].map((card) => (
             <div key={card.label} className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
               <p className="text-sm text-gray-500">{card.label}</p>
@@ -36,7 +18,7 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }
