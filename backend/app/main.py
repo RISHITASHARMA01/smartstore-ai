@@ -88,9 +88,9 @@ async def security_and_logging(request: Request, call_next):
     # HSTS — only meaningful over HTTPS; safe to send always
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # CSP — blocks inline scripts/styles injected by XSS
-    api_origin = os.getenv("API_URL", "http://localhost:8000")
+    api_origin = os.getenv("API_URL", "")
     request_origin = f"{request.url.scheme}://{request.url.hostname}:{request.url.port}"
-    connect_src = " ".join({api_origin, request_origin, "http://localhost:8000"})
+    connect_src = " ".join(filter(None, {api_origin, request_origin}))
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
