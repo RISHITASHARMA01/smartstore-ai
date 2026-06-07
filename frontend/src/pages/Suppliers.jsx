@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import SupplierModal from '../components/SupplierModal'
@@ -11,7 +11,7 @@ export default function Suppliers() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editSupplier, setEditSupplier] = useState(null)
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
@@ -23,12 +23,12 @@ export default function Suppliers() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [search])
 
   useEffect(() => {
     const timer = setTimeout(fetchSuppliers, 300)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [fetchSuppliers])
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"?`)) return

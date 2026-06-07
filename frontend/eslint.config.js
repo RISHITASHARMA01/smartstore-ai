@@ -17,5 +17,11 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Allow _-prefixed variables as intentional discard (e.g. const { foo: _foo, ...rest } = obj)
+      'no-unused-vars': ['error', { vars: 'all', args: 'after-used', varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+      // Downgrade React Compiler rule — standard async data-fetching via useEffect is valid here
+      'react-hooks/set-state-in-effect': 'warn',
+    },
   },
 ])

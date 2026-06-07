@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -30,7 +30,7 @@ export default function ProductDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
 
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     try {
       const data = await getProduct(id)
       setProduct(data)
@@ -39,9 +39,9 @@ export default function ProductDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
-  const fetchForecast = async () => {
+  const fetchForecast = useCallback(async () => {
     try {
       const { data } = await api.get(`/products/${id}/forecast`)
       setForecast(data.forecast || [])
@@ -50,9 +50,9 @@ export default function ProductDetail() {
     } finally {
       setForecastLoading(false)
     }
-  }
+  }, [id])
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
       const { data } = await api.get(`/products/${id}/history`)
@@ -62,13 +62,13 @@ export default function ProductDetail() {
     } finally {
       setHistoryLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchProduct()
     fetchForecast()
     fetchHistory()
-  }, [id])
+  }, [fetchProduct, fetchForecast, fetchHistory])
 
   const handleAdjustClose = (refresh) => {
     setAdjustOpen(false)

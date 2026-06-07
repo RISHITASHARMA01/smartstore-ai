@@ -31,7 +31,7 @@ export default function ProductModal({ product, onClose }) {
         expiry_date: data.expiry_date || null,
       }
       if (isEdit) {
-        const { sku, ...updatePayload } = payload
+        const { sku: _sku, ...updatePayload } = payload
         await updateProduct(product.id, updatePayload)
         toast.success('Product updated')
       } else {

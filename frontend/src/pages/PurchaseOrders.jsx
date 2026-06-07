@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import POModal from '../components/POModal'
@@ -27,7 +27,7 @@ export default function PurchaseOrders() {
   // undefined = modal closed, null = new PO, object = edit PO
   const [modalPO, setModalPO] = useState(undefined)
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
@@ -38,9 +38,9 @@ export default function PurchaseOrders() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
 
-  useEffect(() => { fetchOrders() }, [statusFilter])
+  useEffect(() => { fetchOrders() }, [fetchOrders])
 
   const handleAdvance = async (po) => {
     setAdvancing(po.id)

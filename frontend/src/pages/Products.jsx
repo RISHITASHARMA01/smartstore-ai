@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
@@ -14,7 +14,7 @@ export default function Products() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editProduct, setEditProduct] = useState(null)
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
@@ -27,12 +27,12 @@ export default function Products() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [search, categoryFilter])
 
   useEffect(() => {
     const timer = setTimeout(fetchProducts, 300)
     return () => clearTimeout(timer)
-  }, [search, categoryFilter])
+  }, [fetchProducts])
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"?`)) return

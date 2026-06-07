@@ -15,7 +15,6 @@ export default function StockAdjustModal({ product, onClose }) {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const selected = TYPES.find((t) => t.value === changeType)
   const isDecrease = changeType === 'sale' || changeType === 'write_off'
   const newQty = isDecrease ? product.stock_qty - qty : product.stock_qty + qty
   const invalid = qty <= 0 || newQty < 0
