@@ -10,7 +10,9 @@ import PurchaseOrders from './pages/PurchaseOrders'
 import InvoiceList from './pages/InvoiceList'
 import InvoiceUpload from './pages/InvoiceUpload'
 import Reports from './pages/Reports'
+import Users from './pages/Users'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 export default function App() {
   return (
@@ -81,6 +83,14 @@ export default function App() {
             <ProtectedRoute>
               <Reports />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <Users />
+            </AdminRoute>
           }
         />
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 
-const navItems = [
+const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/products', label: 'Products' },
   { to: '/suppliers', label: 'Suppliers' },
@@ -10,9 +10,15 @@ const navItems = [
   { to: '/reports', label: 'Reports' },
 ]
 
+const ADMIN_ITEMS = [
+  { to: '/admin/users', label: 'Users' },
+]
+
 export default function Layout({ children }) {
   const logout = useAuthStore((s) => s.logout)
+  const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
+  const navItems = user?.role === 'admin' ? [...NAV_ITEMS, ...ADMIN_ITEMS] : NAV_ITEMS
 
   const handleLogout = () => {
     logout()
