@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Products from './pages/Products'
+import ProductDetail from './pages/ProductDetail'
 import Suppliers from './pages/Suppliers'
 import PurchaseOrders from './pages/PurchaseOrders'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -28,6 +29,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Products />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/:id"
+          element={
+            <ProtectedRoute>
+              <ProductDetail />
             </ProtectedRoute>
           }
         />

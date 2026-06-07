@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import ProductModal from '../components/ProductModal'
 import { getProducts, deleteProduct } from '../api/products'
 
 export default function Products() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -123,7 +125,11 @@ export default function Products() {
                   const isExpired =
                     p.expiry_date && new Date(p.expiry_date) < new Date()
                   return (
-                    <tr key={p.id} className="hover:bg-gray-50">
+                    <tr
+                      key={p.id}
+                      className="hover:bg-blue-50 cursor-pointer"
+                      onClick={() => navigate(`/products/${p.id}`)}
+                    >
                       <td className="px-4 py-3 font-mono text-gray-500 text-xs">{p.sku}</td>
                       <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
                       <td className="px-4 py-3 text-gray-600">{p.category}</td>
@@ -147,13 +153,13 @@ export default function Products() {
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <button
-                          onClick={() => openEdit(p)}
+                          onClick={(e) => { e.stopPropagation(); openEdit(p) }}
                           className="text-blue-500 hover:text-blue-700 text-xs font-medium mr-3"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id, p.name)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(p.id, p.name) }}
                           className="text-red-400 hover:text-red-600 text-xs font-medium"
                         >
                           Delete

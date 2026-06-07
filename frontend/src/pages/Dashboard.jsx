@@ -1,4 +1,5 @@
 import Layout from '../components/Layout'
+import ChatPanel from '../components/ChatPanel'
 
 export default function Dashboard() {
   return (
@@ -19,6 +20,7 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+      <ChatPanel />
     </Layout>
   )
 }
