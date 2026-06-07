@@ -32,7 +32,7 @@ class Supplier(Base):
     id             = Column(Integer, primary_key=True, index=True)
     name           = Column(String, nullable=False)
     email          = Column(String, nullable=False)
-    categories     = Column(JSON, default=[])
+    categories     = Column(JSON, default=list)
     lead_time_days = Column(Integer, default=3)
     is_active      = Column(Boolean, default=True)
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
@@ -76,7 +76,7 @@ class Invoice(Base):
     id            = Column(Integer, primary_key=True, index=True)
     supplier_name = Column(String, nullable=True)
     invoice_date  = Column(String, nullable=True)
-    line_items    = Column(JSON, default=[])
+    line_items    = Column(JSON, default=list)
     grand_total   = Column(Float, nullable=True)
     confirmed     = Column(Boolean, default=False)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
@@ -85,7 +85,7 @@ class Report(Base):
     __tablename__ = "reports"
     id         = Column(Integer, primary_key=True, index=True)
     type       = Column(String, nullable=False)  # low_stock_po, weekly_summary, expiry_alert
-    content    = Column(JSON, default={})
+    content    = Column(JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

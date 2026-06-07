@@ -86,7 +86,7 @@ def update_purchase_order(po_id: int, payload: POUpdate, db: Session = Depends(g
         po.notes = payload.notes
 
     if payload.line_items is not None:
-        db.query(POLineItem).filter(POLineItem.po_id == po_id).delete()
+        db.query(POLineItem).filter(POLineItem.po_id == po_id).delete(synchronize_session=False)
         total = 0.0
         for item in payload.line_items:
             if not db.query(Product).filter(Product.id == item.product_id, Product.is_active == True).first():
@@ -134,6 +134,6 @@ def delete_purchase_order(po_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Purchase order not found")
     if po.status != "Draft":
         raise HTTPException(status_code=400, detail="Only Draft orders can be deleted")
-    db.query(POLineItem).filter(POLineItem.po_id == po_id).delete()
+    db.query(POLineItem).filter(POLineItem.po_id == po_id).delete(synchronize_session=False)
     db.delete(po)
     db.commit()
