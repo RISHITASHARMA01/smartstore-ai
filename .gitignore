@@ -8,3 +8,8 @@ node_modules/
 dist/
 .venv/
 venv/
+
+# Test artifacts
+backend/.coverage
+backend/test.db
+backend/coverage.xml
