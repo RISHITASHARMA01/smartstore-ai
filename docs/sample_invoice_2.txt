@@ -1,0 +1,36 @@
+=====================================
+      FRESH DAIRY DISTRIBUTORS
+    Plot 7, APMC Yard, Pune 411001
+    GSTIN: 27AABCD1234E1Z5
+    Tel: +91 87654 32109
+=====================================
+
+TAX INVOICE
+
+Invoice Number: FDD/2024/1102
+Date: 2024-12-18
+Payment Terms: Net 15 days
+
+Supplier: Fresh Dairy Distributors
+Buyer: SmartStore Retail Pvt Ltd
+
+-------------------------------------
+PRODUCT              QTY  RATE   AMOUNT
+-------------------------------------
+Full Cream Milk 1L    50  ₹65    ₹3,250
+Paneer 200g           30  ₹95    ₹2,850
+Butter 500g           20  ₹240   ₹4,800
+Curd 400g             40  ₹55    ₹2,200
+Ghee 500ml            15  ₹380   ₹5,700
+Cheese Slices 200g    25  ₹175   ₹4,375
+-------------------------------------
+Net Amount:                        ₹23,175
+CGST (2.5%):                       ₹579.38
+SGST (2.5%):                       ₹579.38
+-------------------------------------
+INVOICE TOTAL:                     ₹24,333.75
+=====================================
+Delivery: Within 24 hours
+Cold chain maintained throughout.
+=====================================
+Authorised Signatory: Ramesh Kumar
