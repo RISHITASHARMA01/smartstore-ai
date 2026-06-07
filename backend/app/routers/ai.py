@@ -1,9 +1,12 @@
 import os
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 from google import genai
 from google.genai import types
 
@@ -97,12 +100,12 @@ GEMINI_TOOLS = [types.Tool(function_declarations=_TOOL_DECLARATIONS)]
 
 
 class Message(BaseModel):
-    role: str
-    content: str
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=4000)
 
 
 class ChatRequest(BaseModel):
-    messages: List[Message]
+    messages: List[Message] = Field(min_length=1, max_length=50)
 
 
 @router.post("/chat")
@@ -156,23 +159,34 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)):
 
     except Exception as e:
         err = str(e)
+        logger.error("Gemini chat error: %s", err)
         if "API_KEY_INVALID" in err or "API key not valid" in err or "invalid" in err.lower():
-            raise HTTPException(
-                status_code=500,
-                detail="Invalid GEMINI_API_KEY — update .env with your real Gemini API key",
-            )
-        raise HTTPException(status_code=500, detail=f"Gemini error: {err}")
+            raise HTTPException(status_code=500, detail="AI service configuration error")
+        raise HTTPException(status_code=500, detail="AI service error. Please try again.")
 
     raise HTTPException(status_code=500, detail="Max tool iterations reached without final response")
 
 
 def _run_tool(name: str, inputs: dict, db: Session):
+    # Validate and clamp all AI tool parameters before passing to DB functions
     if name == "get_low_stock_products":
-        return get_low_stock_products(db, **inputs)
+        safe = {"threshold_pct": max(0, min(100, int(inputs.get("threshold_pct", 20))))}
+        return get_low_stock_products(db, **safe)
     if name == "get_product_detail":
-        return get_product_detail(db, **inputs)
+        safe = {}
+        if "product_id" in inputs:
+            safe["product_id"] = int(inputs["product_id"])
+        if "product_name" in inputs:
+            safe["product_name"] = str(inputs["product_name"])[:100]
+        return get_product_detail(db, **safe)
     if name == "get_po_history":
-        return get_po_history(db, **inputs)
+        safe = {
+            "days": max(1, min(365, int(inputs.get("days", 30)))),
+        }
+        if "supplier_name" in inputs:
+            safe["supplier_name"] = str(inputs["supplier_name"])[:100]
+        return get_po_history(db, **safe)
     if name == "get_expiring_products":
-        return get_expiring_products(db, **inputs)
-    return {"error": f"Unknown tool: {name}"}
+        safe = {"days_ahead": max(1, min(365, int(inputs.get("days_ahead", 14))))}
+        return get_expiring_products(db, **safe)
+    return {"error": "Unknown tool"}

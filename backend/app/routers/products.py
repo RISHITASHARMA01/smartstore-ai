@@ -16,11 +16,11 @@ router = APIRouter(
 
 @router.get("/", response_model=list[ProductOut])
 def list_products(
-    search: Optional[str] = Query(None),
-    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=100),
+    category: Optional[str] = Query(None, max_length=100),
     low_stock: Optional[bool] = Query(None),
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, le=10000),
+    limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     q = db.query(Product).filter(Product.is_active == True)

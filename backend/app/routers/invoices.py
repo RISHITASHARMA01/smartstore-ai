@@ -1,10 +1,10 @@
 import os
 import re
 import json
-import base64
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from google import genai
@@ -14,7 +14,11 @@ from ..database import get_db
 from ..auth.dependencies import get_current_user
 from ..models import Invoice, Product, StockHistory
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(dependencies=[Depends(get_current_user)])
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 PARSE_PROMPT = (
     "Extract the following from this invoice image and return ONLY valid JSON with no markdown:\n"
@@ -38,7 +42,7 @@ ALLOWED_MIME = {
 def _gemini_client():
     key = os.getenv("GEMINI_API_KEY")
     if not key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+        raise HTTPException(status_code=500, detail="AI service not configured")
     return genai.Client(api_key=key)
 
 
@@ -55,24 +59,24 @@ async def parse_invoice(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    # Validate MIME type from Content-Type only (don't trust filename)
     content_type = file.content_type or ""
     mime = ALLOWED_MIME.get(content_type)
     if not mime:
-        # Try by extension
-        name = (file.filename or "").lower()
-        if name.endswith(".jpg") or name.endswith(".jpeg"):
-            mime = "image/jpeg"
-        elif name.endswith(".png"):
-            mime = "image/png"
-        elif name.endswith(".pdf"):
-            mime = "application/pdf"
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Unsupported file type. Upload a JPG, PNG, or PDF.",
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Upload a JPG, PNG, or PDF.",
+        )
 
     file_bytes = await file.read()
+
+    # Enforce file size limit
+    if len(file_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)} MB.",
+        )
+
     client = _gemini_client()
 
     try:
@@ -84,15 +88,14 @@ async def parse_invoice(
             ],
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini Vision error: {e}")
+        logger.error("Gemini Vision error: %s", e)
+        raise HTTPException(status_code=500, detail="AI service error. Please try again.")
 
     try:
         data = _parse_gemini_json(response.text)
-    except Exception:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Could not parse Gemini response as JSON: {response.text[:300]}",
-        )
+    except Exception as e:
+        logger.error("Failed to parse Gemini JSON response: %s", e)
+        raise HTTPException(status_code=422, detail="Could not extract invoice data. Please try a clearer image.")
 
     invoice = Invoice(
         supplier_name=data.get("supplier_name"),
@@ -117,13 +120,13 @@ async def parse_invoice(
 
 # ── POST /invoices/confirm/{invoice_id} ───────────────────────────────────────
 class ConfirmLineItem(BaseModel):
-    product_name: str
-    qty: int
-    unit_price: float
+    product_name: str = Field(min_length=1, max_length=255)
+    qty: int = Field(gt=0, le=100000)
+    unit_price: float = Field(ge=0)
 
 
 class ConfirmRequest(BaseModel):
-    line_items: List[ConfirmLineItem]
+    line_items: List[ConfirmLineItem] = Field(min_length=1, max_length=500)
 
 
 @router.post("/confirm/{invoice_id}")
@@ -142,10 +145,12 @@ def confirm_invoice(
     not_found = []
 
     for item in payload.line_items:
+        # Escape wildcard chars to prevent ReDoS via LIKE
+        safe_name = item.product_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         product = (
             db.query(Product)
             .filter(
-                Product.name.ilike(f"%{item.product_name}%"),
+                Product.name.ilike(f"%{safe_name}%"),
                 Product.is_active == True,
             )
             .first()
@@ -178,9 +183,7 @@ def confirm_invoice(
 # ── GET /invoices ─────────────────────────────────────────────────────────────
 @router.get("/")
 def list_invoices(db: Session = Depends(get_db)):
-    invoices = (
-        db.query(Invoice).order_by(Invoice.created_at.desc()).all()
-    )
+    invoices = db.query(Invoice).order_by(Invoice.created_at.desc()).all()
     return [
         {
             "id": inv.id,

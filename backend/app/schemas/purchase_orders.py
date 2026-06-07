@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 from typing import Optional
 from datetime import datetime
 
@@ -6,9 +6,9 @@ VALID_STATUSES = ["Draft", "Sent", "Acknowledged", "Received"]
 
 
 class POLineItemCreate(BaseModel):
-    product_id: int
-    quantity: int
-    unit_price: float
+    product_id: int = Field(gt=0)
+    quantity: int = Field(gt=0, le=100000)
+    unit_price: float = Field(gt=0)
 
 
 class ProductSummary(BaseModel):
@@ -35,9 +35,9 @@ class POLineItemOut(BaseModel):
 
 
 class POCreate(BaseModel):
-    supplier_id: int
-    notes: Optional[str] = None
-    line_items: list[POLineItemCreate]
+    supplier_id: int = Field(gt=0)
+    notes: Optional[str] = Field(default=None, max_length=5000)
+    line_items: list[POLineItemCreate] = Field(min_length=1, max_length=500)
 
     @field_validator("line_items")
     @classmethod
@@ -48,8 +48,8 @@ class POCreate(BaseModel):
 
 
 class POUpdate(BaseModel):
-    notes: Optional[str] = None
-    line_items: Optional[list[POLineItemCreate]] = None
+    notes: Optional[str] = Field(default=None, max_length=5000)
+    line_items: Optional[list[POLineItemCreate]] = Field(default=None, max_length=500)
 
 
 class POOut(BaseModel):

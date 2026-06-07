@@ -1,20 +1,20 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
 
 class SupplierCreate(BaseModel):
-    name: str
-    email: EmailStr
-    categories: list[str] = []
-    lead_time_days: int = 3
+    name: str = Field(min_length=1, max_length=255)
+    email: EmailStr = Field(max_length=254)
+    categories: list[str] = Field(default=[], max_length=20)
+    lead_time_days: int = Field(default=3, ge=0, le=365)
 
 
 class SupplierUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    categories: Optional[list[str]] = None
-    lead_time_days: Optional[int] = None
+    name: Optional[str] = Field(default=None, max_length=255)
+    email: Optional[EmailStr] = Field(default=None, max_length=254)
+    categories: Optional[list[str]] = Field(default=None, max_length=20)
+    lead_time_days: Optional[int] = Field(default=None, ge=0, le=365)
 
 
 class SupplierOut(BaseModel):
