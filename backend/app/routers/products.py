@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
-from ..models import Product
-from ..schemas.products import ProductCreate, ProductUpdate, ProductOut
+from ..models import Product, StockHistory
+from ..schemas.products import ProductCreate, ProductUpdate, ProductOut, StockAdjustIn, StockAdjustOut
 from ..auth.dependencies import get_current_user
 
 router = APIRouter(
@@ -85,3 +85,57 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
     product.is_active = False
     db.commit()
+
+
+@router.post("/{product_id}/adjust", response_model=StockAdjustOut)
+def adjust_stock(product_id: int, payload: StockAdjustIn, db: Session = Depends(get_db)):
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.is_active == True)
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # sales and write-offs reduce stock; restocks and adjustments increase it
+    if payload.change_type in ("sale", "write_off"):
+        delta = -payload.qty
+    else:
+        delta = payload.qty
+
+    if product.stock_qty + delta < 0:
+        raise HTTPException(status_code=400, detail="Stock cannot go below 0")
+
+    product.stock_qty += delta
+    db.add(StockHistory(product_id=product.id, change_qty=delta, change_type=payload.change_type))
+    db.commit()
+    db.refresh(product)
+    return StockAdjustOut(
+        product_id=product.id,
+        new_stock_qty=product.stock_qty,
+        change_qty=delta,
+        change_type=payload.change_type,
+    )
+
+
+@router.get("/{product_id}/history")
+def stock_history(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id, Product.is_active == True).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    rows = (
+        db.query(StockHistory)
+        .filter(StockHistory.product_id == product_id)
+        .order_by(StockHistory.recorded_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "change_qty": r.change_qty,
+            "change_type": r.change_type,
+            "recorded_at": r.recorded_at.isoformat(),
+        }
+        for r in rows
+    ]

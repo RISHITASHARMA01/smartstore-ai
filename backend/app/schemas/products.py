@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Optional, Literal
 from datetime import datetime
 
 
@@ -36,3 +36,23 @@ class ProductOut(BaseModel):
     updated_at: Optional[datetime]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StockAdjustIn(BaseModel):
+    change_type: Literal["sale", "restock", "write_off", "adjustment"]
+    qty: int
+    note: Optional[str] = None
+
+    @field_validator("qty")
+    @classmethod
+    def qty_positive(cls, v):
+        if v <= 0:
+            raise ValueError("qty must be greater than 0")
+        return v
+
+
+class StockAdjustOut(BaseModel):
+    product_id: int
+    new_stock_qty: int
+    change_qty: int
+    change_type: str
