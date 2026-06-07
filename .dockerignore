@@ -1,0 +1,22 @@
+# Credentials — never in build context
+.env
+
+# Version control
+.git/
+.gitignore
+
+# Frontend build artifacts and deps
+frontend/node_modules/
+frontend/dist/
+
+# Backend venv and cache
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+
+# Misc
+*.md
+.claude/
+scripts/

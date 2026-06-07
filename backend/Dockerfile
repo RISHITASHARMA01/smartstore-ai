@@ -2,18 +2,27 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Create a non-root user to run the application
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
-
-COPY requirements.txt .
+# Install dependencies in a cached layer before copying source
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy backend source code
+COPY backend/ ./
 
-# Own the app directory as the non-root user
-RUN chown -R appuser:appgroup /app
+# Copy the root alembic.ini and patch script_location for the container layout.
+# Locally the ini lives at the project root with script_location = backend/alembic;
+# inside the container the alembic/ directory is directly under WORKDIR /app.
+COPY alembic.ini ./alembic.ini
+RUN sed -i 's|script_location = backend/alembic|script_location = alembic|' alembic.ini \
+    && chmod +x ./entrypoint.sh
 
+# Drop to a non-root user for runtime security
+RUN addgroup --system appgroup \
+    && adduser --system --ingroup appgroup appuser \
+    && chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# entrypoint runs `alembic upgrade head` then starts uvicorn
+ENTRYPOINT ["./entrypoint.sh"]

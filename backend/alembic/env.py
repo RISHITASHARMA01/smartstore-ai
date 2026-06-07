@@ -5,18 +5,22 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-sys.path.append(str(Path(__file__).parents[2]))
+# Add the directory that contains the `app/` package to sys.path.
+# Locally this is <project-root>/backend/; in Docker it is /app/ (the WORKDIR).
+# Both layouts have app/ as a direct sub-directory, so `from app.X import Y` works.
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
-# Load .env from the project root explicitly so migrations work from any CWD
+# Load .env when running migrations locally; in Docker the env vars are
+# injected by docker-compose so this is a silent no-op if the file is absent.
 load_dotenv(Path(__file__).parents[2] / ".env")
 
 from sqlalchemy import pool
 
 from alembic import context
 
-from backend.app.models import Base
-from backend.app.database import engine
-from backend.app.config import settings
+from app.models import Base
+from app.database import engine
+from app.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
