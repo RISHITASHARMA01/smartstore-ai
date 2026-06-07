@@ -4,7 +4,7 @@ import time
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 
 # Load .env from project root once at startup so os.getenv() works everywhere
 load_dotenv(Path(__file__).parents[2] / ".env")
@@ -14,6 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from .rate_limit import limiter
+from .websocket_manager import manager
 
 from .routers import auth as auth_router
 from .routers import products as products_router
@@ -59,7 +60,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
@@ -122,6 +123,17 @@ app.include_router(forecast_router, tags=["forecast"])
 app.include_router(invoices_router, prefix="/invoices", tags=["invoices"])
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.send_personal_message(f"Echo: {data}", websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 @app.get("/")

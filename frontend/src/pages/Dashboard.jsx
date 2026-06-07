@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import ChatPanel from '../components/ChatPanel'
 import api from '../api/axios'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [recentUpdates, setRecentUpdates] = useState([])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -24,6 +27,22 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
     return () => controller.abort()
   }, [])
+
+  const handleWebSocketMessage = useCallback((message) => {
+    if (message.event === 'stock_updated') {
+      toast.success(`Stock updated: ${message.data.product_name} now has ${message.data.new_stock_qty} units`)
+      if (message.data.status === 'low') {
+        toast.error(`Low stock alert: ${message.data.product_name}`)
+      }
+      setRecentUpdates((prev) => [message.data, ...prev.slice(0, 4)])
+    }
+    if (message.event === 'invoice_confirmed') {
+      toast.success(`Invoice confirmed — ${message.data.products_updated?.length || 0} products restocked`)
+      setRecentUpdates((prev) => [message.data, ...prev.slice(0, 4)])
+    }
+  }, [])
+
+  useWebSocket(handleWebSocketMessage)
 
   const dash = loading ? null : stats
 
@@ -133,6 +152,26 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <h3 className="font-semibold text-gray-700">Live Updates</h3>
+          </div>
+          {recentUpdates.length === 0 ? (
+            <p className="text-sm text-gray-400">Watching for real-time stock changes...</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentUpdates.map((update, i) => (
+                <li key={i} className="text-sm text-gray-600 border-l-2 border-blue-400 pl-3">
+                  {update.product_name
+                    ? `${update.product_name}: ${update.new_stock_qty} units`
+                    : `Invoice confirmed — ${update.products_updated?.length || 0} products restocked`}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
       <ChatPanel />

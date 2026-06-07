@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import json
@@ -14,6 +15,7 @@ from ..database import get_db
 from ..auth.dependencies import get_current_user
 from ..config import settings
 from ..models import Invoice, Product, StockHistory
+from ..websocket_manager import manager
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +133,7 @@ class ConfirmRequest(BaseModel):
 
 
 @router.post("/confirm/{invoice_id}")
-def confirm_invoice(
+async def confirm_invoice(
     invoice_id: int,
     payload: ConfirmRequest,
     db: Session = Depends(get_db),
@@ -173,6 +175,11 @@ def confirm_invoice(
 
     invoice.confirmed = True
     db.commit()
+
+    asyncio.create_task(manager.broadcast("invoice_confirmed", {
+        "invoice_id": invoice_id,
+        "products_updated": updated_products,
+    }))
 
     return {
         "confirmed": True,

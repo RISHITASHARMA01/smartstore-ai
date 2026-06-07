@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -6,6 +7,7 @@ from ..database import get_db
 from ..models import Product, StockHistory, User
 from ..schemas.products import ProductCreate, ProductUpdate, ProductOut, StockAdjustIn, StockAdjustOut
 from ..auth.dependencies import get_current_user
+from ..websocket_manager import manager
 
 router = APIRouter(
     prefix="/products",
@@ -88,7 +90,7 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{product_id}/adjust", response_model=StockAdjustOut)
-def adjust_stock(
+async def adjust_stock(
     product_id: int,
     payload: StockAdjustIn,
     current_user: User = Depends(get_current_user),
@@ -120,6 +122,14 @@ def adjust_stock(
     ))
     db.commit()
     db.refresh(product)
+
+    asyncio.create_task(manager.broadcast("stock_updated", {
+        "product_id": product.id,
+        "product_name": product.name,
+        "new_stock_qty": product.stock_qty,
+        "status": "low" if product.stock_qty <= product.reorder_threshold else "ok",
+    }))
+
     return StockAdjustOut(
         product_id=product.id,
         new_stock_qty=product.stock_qty,
