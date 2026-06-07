@@ -4,7 +4,7 @@ import time
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Query
 
 # Load .env from project root once at startup so os.getenv() works everywhere
 load_dotenv(Path(__file__).parents[2] / ".env")
@@ -15,6 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from .rate_limit import limiter
 from .websocket_manager import manager
+from .auth.utils import decode_token
 
 from .routers import auth as auth_router
 from .routers import products as products_router
@@ -126,7 +127,19 @@ app.include_router(reports_router)
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    token: str = Query(...),
+):
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            await websocket.close(code=4001)
+            return
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
     await manager.connect(websocket)
     try:
         while True:

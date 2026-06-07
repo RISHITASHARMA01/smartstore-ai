@@ -1,6 +1,9 @@
+import logging
 from fastapi import WebSocket
 from typing import List
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
@@ -10,12 +13,12 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        print(f"WebSocket connected. Total connections: {len(self.active_connections)}")
+        logger.info("WebSocket connected. Total connections: %d", len(self.active_connections))
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-        print(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
+        logger.info("WebSocket disconnected. Total connections: %d", len(self.active_connections))
 
     async def broadcast(self, event_type: str, data: dict):
         message = json.dumps({"event": event_type, "data": data})

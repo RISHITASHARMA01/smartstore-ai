@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import ChatPanel from '../components/ChatPanel'
 import api from '../api/axios'
 import { useWebSocket } from '../hooks/useWebSocket'
+
+let _updateId = 0
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -34,11 +36,11 @@ export default function Dashboard() {
       if (message.data.status === 'low') {
         toast.error(`Low stock alert: ${message.data.product_name}`)
       }
-      setRecentUpdates((prev) => [message.data, ...prev.slice(0, 4)])
+      setRecentUpdates((prev) => [{ ...message.data, _id: ++_updateId }, ...prev.slice(0, 4)])
     }
     if (message.event === 'invoice_confirmed') {
       toast.success(`Invoice confirmed — ${message.data.products_updated?.length || 0} products restocked`)
-      setRecentUpdates((prev) => [message.data, ...prev.slice(0, 4)])
+      setRecentUpdates((prev) => [{ ...message.data, _id: ++_updateId }, ...prev.slice(0, 4)])
     }
   }, [])
 
@@ -163,8 +165,8 @@ export default function Dashboard() {
             <p className="text-sm text-gray-400">Watching for real-time stock changes...</p>
           ) : (
             <ul className="space-y-2">
-              {recentUpdates.map((update, i) => (
-                <li key={i} className="text-sm text-gray-600 border-l-2 border-blue-400 pl-3">
+              {recentUpdates.map((update) => (
+                <li key={update._id} className="text-sm text-gray-600 border-l-2 border-blue-400 pl-3">
                   {update.product_name
                     ? `${update.product_name}: ${update.new_stock_qty} units`
                     : `Invoice confirmed — ${update.products_updated?.length || 0} products restocked`}

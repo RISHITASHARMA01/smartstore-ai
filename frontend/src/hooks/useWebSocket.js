@@ -7,8 +7,10 @@ export function useWebSocket(onMessage) {
   const reconnectTimeout = useRef(null)
 
   const connect = useCallback(() => {
+    const token = localStorage.getItem('access_token')
+    if (!token) return  // don't connect if unauthenticated
     try {
-      ws.current = new WebSocket(`${WS_BASE}/ws`)
+      ws.current = new WebSocket(`${WS_BASE}/ws?token=${encodeURIComponent(token)}`)
 
       ws.current.onopen = () => {
         console.log('WebSocket connected')

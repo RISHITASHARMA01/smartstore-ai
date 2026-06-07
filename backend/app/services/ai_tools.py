@@ -28,7 +28,8 @@ def get_product_detail(db: Session, product_id: int = None, product_name: str = 
     if product_id is not None:
         product = db.query(Product).filter(Product.id == product_id, Product.is_active == True).first()
     elif product_name:
-        product = db.query(Product).filter(Product.name.ilike(f"%{product_name}%"), Product.is_active == True).first()
+        safe = product_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        product = db.query(Product).filter(Product.name.ilike(f"%{safe}%"), Product.is_active == True).first()
     else:
         return {"error": "Must provide product_id or product_name"}
 
@@ -57,7 +58,8 @@ def get_po_history(db: Session, supplier_name: str = None, days: int = 30):
         .filter(PurchaseOrder.created_at >= since)
     )
     if supplier_name:
-        q = q.filter(Supplier.name.ilike(f"%{supplier_name}%"))
+        safe = supplier_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        q = q.filter(Supplier.name.ilike(f"%{safe}%"))
 
     rows = q.all()
     po_ids = [po.id for po, _ in rows]

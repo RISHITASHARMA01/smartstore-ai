@@ -30,9 +30,23 @@ def get_current_user(
                 detail="Token has been revoked. Please log in again.",
             )
 
+    sub = payload.get("sub")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: missing subject claim",
+        )
+    try:
+        user_id = int(sub)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: malformed subject claim",
+        )
+
     user = (
         db.query(User)
-        .filter(User.id == int(payload["sub"]), User.is_active == True)
+        .filter(User.id == user_id, User.is_active == True)
         .first()
     )
     if not user:
