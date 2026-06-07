@@ -2,7 +2,12 @@ import os
 import uuid
 import time
 import logging
+from pathlib import Path
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+
+# Load .env from project root once at startup so os.getenv() works everywhere
+load_dotenv(Path(__file__).parents[2] / ".env")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler

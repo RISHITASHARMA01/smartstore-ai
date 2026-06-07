@@ -2,11 +2,13 @@ from logging.config import fileConfig
 
 import os
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(str(Path(__file__).parents[2]))
 
-load_dotenv()
+# Load .env from the project root explicitly so migrations work from any CWD
+load_dotenv(Path(__file__).parents[2] / ".env")
 
 from sqlalchemy import pool
 
