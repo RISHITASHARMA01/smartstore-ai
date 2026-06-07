@@ -56,14 +56,16 @@ git clone https://github.com/RISHITASHARMA01/smartstore-ai.git
 cd smartstore-ai
 ```
 
-Create `backend/.env`:
+Copy and fill in the env file at the project root:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` — the two values you must set:
 
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/smartstore
-SECRET_KEY=change-me-to-a-random-string
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
+SECRET_KEY=<run: python -c "import secrets; print(secrets.token_hex(32))">
 GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
@@ -85,7 +87,9 @@ cd backend
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-alembic upgrade head             # run migrations
+cd ..
+alembic upgrade head             # run migrations (alembic.ini is at project root)
+cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -106,8 +110,8 @@ Open http://localhost:5173 — register a new account and log in.
 ## Docker Compose (one-command startup)
 
 ```bash
-# Copy and edit the env file first
-cp backend/.env.example backend/.env   # then add your GEMINI_API_KEY
+# Copy and fill in the env file first
+cp .env.example .env   # then set SECRET_KEY and GEMINI_API_KEY
 
 docker compose up --build
 ```
