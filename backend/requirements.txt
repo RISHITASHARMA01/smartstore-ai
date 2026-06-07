@@ -12,3 +12,9 @@ python-multipart==0.0.32
 google-genai>=2.0.0
 python-dotenv==1.2.2
 slowapi>=0.1.9
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.28.1
+pytest-cov==5.0.0
