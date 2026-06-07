@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 from sqlalchemy.orm import Session
-import anthropic
+from google import genai
+from google.genai import types
 
 from ..database import get_db
 from ..auth.dependencies import get_current_user
@@ -23,78 +24,76 @@ SYSTEM_PROMPT = (
     "stock levels, products, suppliers, or purchase orders. Never make up numbers."
 )
 
-TOOLS = [
-    {
-        "name": "get_low_stock_products",
-        "description": (
-            "Get all active products running low on stock (stock at or below reorder threshold). "
+_TOOL_DECLARATIONS = [
+    types.FunctionDeclaration(
+        name="get_low_stock_products",
+        description=(
+            "Get all active products running low on stock (at or below reorder threshold). "
             "Use this to answer questions about low stock, restocking needs, or inventory alerts."
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "threshold_pct": {
-                    "type": "integer",
-                    "description": "Optional threshold percentage override. Default is 20.",
-                }
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "threshold_pct": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="Optional threshold percentage override. Default is 20.",
+                )
             },
-            "required": [],
-        },
-    },
-    {
-        "name": "get_product_detail",
-        "description": "Get detailed information about a specific product by ID or name.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "product_id": {
-                    "type": "integer",
-                    "description": "The product ID to look up.",
-                },
-                "product_name": {
-                    "type": "string",
-                    "description": "The product name to search for (partial match supported).",
-                },
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="get_product_detail",
+        description="Get detailed information about a specific product by ID or name.",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "product_id": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="The product ID to look up.",
+                ),
+                "product_name": types.Schema(
+                    type=types.Type.STRING,
+                    description="The product name to search for (partial match supported).",
+                ),
             },
-            "required": [],
-        },
-    },
-    {
-        "name": "get_po_history",
-        "description": (
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="get_po_history",
+        description=(
             "Get purchase order history from the last N days, "
             "optionally filtered by supplier name."
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "supplier_name": {
-                    "type": "string",
-                    "description": "Optional supplier name filter (partial match supported).",
-                },
-                "days": {
-                    "type": "integer",
-                    "description": "Number of days to look back. Default is 30.",
-                },
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "supplier_name": types.Schema(
+                    type=types.Type.STRING,
+                    description="Optional supplier name filter (partial match supported).",
+                ),
+                "days": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="Number of days to look back. Default is 30.",
+                ),
             },
-            "required": [],
-        },
-    },
-    {
-        "name": "get_expiring_products",
-        "description": "Get products expiring within the next N days.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "days_ahead": {
-                    "type": "integer",
-                    "description": "Number of days ahead to check for expiry. Default is 14.",
-                }
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="get_expiring_products",
+        description="Get products expiring within the next N days.",
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "days_ahead": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="Number of days ahead to check for expiry. Default is 14.",
+                )
             },
-            "required": [],
-        },
-    },
+        ),
+    ),
 ]
+
+GEMINI_TOOLS = [types.Tool(function_declarations=_TOOL_DECLARATIONS)]
 
 
 class Message(BaseModel):
@@ -108,66 +107,61 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 def chat(payload: ChatRequest, db: Session = Depends(get_db)):
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
-
-    client = anthropic.Anthropic(api_key=api_key)
-    messages = [{"role": m.role, "content": m.content} for m in payload.messages]
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured in .env")
 
     try:
-        for _ in range(10):
-            response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                tools=TOOLS,
-                messages=messages,
+        client = genai.Client(api_key=api_key)
+
+        messages = payload.messages
+        # Convert prior messages to Gemini history format (all but the last)
+        history = []
+        for msg in messages[:-1]:
+            gemini_role = "model" if msg.role == "assistant" else "user"
+            history.append(
+                types.Content(role=gemini_role, parts=[types.Part(text=msg.content)])
             )
 
-            if response.stop_reason == "end_turn":
-                text = next(
-                    (block.text for block in response.content if hasattr(block, "text")),
-                    "",
-                )
-                return {"response": text}
+        last_message = messages[-1].content
 
-            if response.stop_reason == "tool_use":
-                assistant_content = []
-                for block in response.content:
-                    if block.type == "tool_use":
-                        assistant_content.append(
-                            {
-                                "type": "tool_use",
-                                "id": block.id,
-                                "name": block.name,
-                                "input": block.input,
-                            }
-                        )
-                    elif block.type == "text":
-                        assistant_content.append({"type": "text", "text": block.text})
-
-                messages.append({"role": "assistant", "content": assistant_content})
-
-                tool_results = []
-                for block in response.content:
-                    if block.type == "tool_use":
-                        result = _run_tool(block.name, block.input, db)
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps(result, default=str),
-                            }
-                        )
-
-                messages.append({"role": "user", "content": tool_results})
-
-    except anthropic.AuthenticationError:
-        raise HTTPException(
-            status_code=500,
-            detail="Invalid ANTHROPIC_API_KEY — update .env with your real Anthropic API key",
+        chat_session = client.chats.create(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                tools=GEMINI_TOOLS,
+            ),
+            history=history,
         )
+
+        response = chat_session.send_message(last_message)
+
+        for _ in range(10):
+            fn_calls = response.function_calls
+            if not fn_calls:
+                return {"response": response.text or ""}
+
+            # Execute all function calls and collect results
+            result_parts = []
+            for fc in fn_calls:
+                result = _run_tool(fc.name, dict(fc.args), db)
+                result_parts.append(
+                    types.Part.from_function_response(
+                        name=fc.name,
+                        response={"result": json.dumps(result, default=str)},
+                    )
+                )
+
+            response = chat_session.send_message(result_parts)
+
+    except Exception as e:
+        err = str(e)
+        if "API_KEY_INVALID" in err or "API key not valid" in err or "invalid" in err.lower():
+            raise HTTPException(
+                status_code=500,
+                detail="Invalid GEMINI_API_KEY — update .env with your real Gemini API key",
+            )
+        raise HTTPException(status_code=500, detail=f"Gemini error: {err}")
 
     raise HTTPException(status_code=500, detail="Max tool iterations reached without final response")
 
