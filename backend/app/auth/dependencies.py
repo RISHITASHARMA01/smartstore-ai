@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User
+from ..models import User, TokenBlocklist
 from .utils import decode_token
 
 security = HTTPBearer()
@@ -18,6 +19,17 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type",
         )
+
+    # Check token blacklist (logout / forced revocation)
+    jti = payload.get("jti")
+    if jti:
+        blocked = db.query(TokenBlocklist).filter(TokenBlocklist.jti == jti).first()
+        if blocked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked. Please log in again.",
+            )
+
     user = (
         db.query(User)
         .filter(User.id == int(payload["sub"]), User.is_active == True)

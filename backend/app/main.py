@@ -1,4 +1,6 @@
 import os
+import uuid
+import time
 import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,12 +23,22 @@ from .routers.reports import router as reports_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Warn if secret key is still the default
-_secret = os.getenv("SECRET_KEY", "")
-if not _secret or _secret in ("your-secret-key-here", "changeme-in-production-generate-with-openssl-rand-hex-32"):
-    logger.warning("⚠️  SECRET_KEY is not set or is using the default value. Set a strong secret in .env.")
+# ── Startup validation ────────────────────────────────────────────────────────
+_WEAK_SECRETS = {"", "changeme", "secret", "your-secret-key-here",
+                 "changeme-in-production-generate-with-openssl-rand-hex-32"}
 
-# Rate limiter — keyed by client IP
+_secret = os.getenv("SECRET_KEY", "")
+if not _secret or _secret in _WEAK_SECRETS:
+    logger.warning("⚠️  SECRET_KEY is not set or is using the default value. "
+                   "Generate one with: openssl rand -hex 32")
+
+if not os.getenv("DATABASE_URL"):
+    logger.warning("⚠️  DATABASE_URL is not set. Backend will fail to connect.")
+
+if not os.getenv("GEMINI_API_KEY"):
+    logger.warning("⚠️  GEMINI_API_KEY is not set. AI features will not work.")
+
+# ── Rate limiter ──────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 app = FastAPI(title="SmartStore AI", version="1.0.0")
@@ -35,6 +47,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# ── CORS ──────────────────────────────────────────────────────────────────────
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 app.add_middleware(
@@ -42,20 +55,57 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
 
+# ── Security headers + request ID + access log ───────────────────────────────
 @app.middleware("http")
-async def security_headers(request: Request, call_next):
+async def security_and_logging(request: Request, call_next):
+    # Assign a unique ID to every request for log correlation
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    start = time.perf_counter()
+
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    duration_ms = round((time.perf_counter() - start) * 1000)
+
+    # Security headers
+    response.headers["X-Content-Type-Options"]  = "nosniff"
+    response.headers["X-Frame-Options"]         = "DENY"
+    response.headers["X-XSS-Protection"]        = "1; mode=block"
+    response.headers["Referrer-Policy"]         = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"]      = "camera=(), microphone=(), geolocation=()"
+    response.headers["X-Request-ID"]            = request_id
+    # HSTS — only meaningful over HTTPS; safe to send always
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    # CSP — blocks inline scripts/styles injected by XSS
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "   # unsafe-inline needed for Vite dev HMR
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self' http://localhost:8000 https://generativelanguage.googleapis.com; "
+        "font-src 'self' data:; "
+        "frame-ancestors 'none';"
+    )
+
+    # Access log: method path status duration user-ip
+    logger.info(
+        "%s %s %s %dms [%s] req=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+        request.client.host if request.client else "-",
+        request_id,
+    )
+
     return response
 
 
+# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth_router.router)
 app.include_router(products_router.router)
 app.include_router(suppliers_router.router)

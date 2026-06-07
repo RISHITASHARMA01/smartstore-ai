@@ -99,6 +99,36 @@ _TOOL_DECLARATIONS = [
 GEMINI_TOOLS = [types.Tool(function_declarations=_TOOL_DECLARATIONS)]
 
 
+# Prompt injection patterns — phrases that attempt to hijack system instructions
+_INJECTION_PATTERNS = [
+    "ignore previous instructions",
+    "ignore all previous",
+    "forget your instructions",
+    "disregard your",
+    "you are now",
+    "act as if you are",
+    "pretend you are",
+    "your new instructions",
+    "override instructions",
+    "system prompt",
+    "new system prompt",
+    "jailbreak",
+    "dan mode",
+    "developer mode",
+    "unrestricted mode",
+]
+
+
+def _check_prompt_injection(content: str) -> None:
+    lower = content.lower()
+    for pattern in _INJECTION_PATTERNS:
+        if pattern in lower:
+            raise HTTPException(
+                status_code=400,
+                detail="Message contains disallowed content.",
+            )
+
+
 class Message(BaseModel):
     role: str = Field(pattern="^(user|assistant)$")
     content: str = Field(min_length=1, max_length=4000)
@@ -110,6 +140,11 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 def chat(payload: ChatRequest, db: Session = Depends(get_db)):
+    # Guard against prompt injection in user messages
+    for msg in payload.messages:
+        if msg.role == "user":
+            _check_prompt_injection(msg.content)
+
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured in .env")

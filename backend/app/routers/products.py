@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..database import get_db
-from ..models import Product, StockHistory
+from ..models import Product, StockHistory, User
 from ..schemas.products import ProductCreate, ProductUpdate, ProductOut, StockAdjustIn, StockAdjustOut
 from ..auth.dependencies import get_current_user
 
@@ -88,7 +88,12 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{product_id}/adjust", response_model=StockAdjustOut)
-def adjust_stock(product_id: int, payload: StockAdjustIn, db: Session = Depends(get_db)):
+def adjust_stock(
+    product_id: int,
+    payload: StockAdjustIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     product = (
         db.query(Product)
         .filter(Product.id == product_id, Product.is_active == True)
@@ -107,7 +112,12 @@ def adjust_stock(product_id: int, payload: StockAdjustIn, db: Session = Depends(
         raise HTTPException(status_code=400, detail="Stock cannot go below 0")
 
     product.stock_qty += delta
-    db.add(StockHistory(product_id=product.id, change_qty=delta, change_type=payload.change_type))
+    db.add(StockHistory(
+        product_id=product.id,
+        user_id=current_user.id,
+        change_qty=delta,
+        change_type=payload.change_type,
+    ))
     db.commit()
     db.refresh(product)
     return StockAdjustOut(
