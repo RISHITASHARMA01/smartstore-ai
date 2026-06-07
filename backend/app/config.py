@@ -9,9 +9,10 @@ _ENV_FILE = Path(__file__).parents[2] / ".env"
 class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:password@localhost:5432/smartstore"
     secret_key: str = "changeme-in-production-generate-with-openssl-rand-hex-32"
-    algorithm: str = "HS256"
+    algorithm: str = "HS256"   # read-only; hardcoded in auth/utils.py — env var is ignored
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = {"env_file": str(_ENV_FILE), "extra": "ignore"}
 

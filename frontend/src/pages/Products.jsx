@@ -85,6 +85,7 @@ export default function Products() {
             placeholder="Search name or SKU…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search products"
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <select
@@ -137,7 +138,7 @@ export default function Products() {
                         {p.stock_qty}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">
-                        ₹{p.unit_price.toFixed(2)}
+                        ₹{(p.unit_price ?? 0).toFixed(2)}
                       </td>
                       <td className={`px-4 py-3 text-sm ${isExpired ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
                         {p.expiry_date ? new Date(p.expiry_date).toLocaleDateString() : '—'}

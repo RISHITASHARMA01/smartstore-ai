@@ -1,7 +1,7 @@
 import api from './axios'
 
-export const getSuppliers = (params = {}) =>
-  api.get('/suppliers', { params }).then((r) => r.data)
+export const getSuppliers = (params = {}, signal) =>
+  api.get('/suppliers', { params, signal }).then((r) => r.data)
 
 export const getSupplier = (id) =>
   api.get(`/suppliers/${id}`).then((r) => r.data)

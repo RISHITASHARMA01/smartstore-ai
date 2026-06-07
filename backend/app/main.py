@@ -10,10 +10,10 @@ from fastapi import FastAPI, Request
 load_dotenv(Path(__file__).parents[2] / ".env")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from .rate_limit import limiter
 
 from .routers import auth as auth_router
 from .routers import products as products_router
@@ -44,7 +44,6 @@ if not os.getenv("GEMINI_API_KEY"):
     logger.warning("⚠️  GEMINI_API_KEY is not set. AI features will not work.")
 
 # ── Rate limiter ──────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 app = FastAPI(title="SmartStore AI", version="1.0.0")
 
@@ -86,12 +85,13 @@ async def security_and_logging(request: Request, call_next):
     # HSTS — only meaningful over HTTPS; safe to send always
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # CSP — blocks inline scripts/styles injected by XSS
+    api_origin = os.getenv("API_URL", "http://localhost:8000")
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline'; "   # unsafe-inline needed for Vite dev HMR
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
-        "connect-src 'self' http://localhost:8000 https://generativelanguage.googleapis.com; "
+        f"connect-src 'self' {api_origin} https://generativelanguage.googleapis.com; "
         "font-src 'self' data:; "
         "frame-ancestors 'none';"
     )

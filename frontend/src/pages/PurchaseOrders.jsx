@@ -152,15 +152,15 @@ export default function PurchaseOrders() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">
                       PO-{String(po.id).padStart(4, '0')}
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{po.supplier.name}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{po.supplier?.name ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[po.status]}`}>
                         {po.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">{po.line_items.length}</td>
+                    <td className="px-4 py-3 text-right text-gray-600">{(po.line_items || []).length}</td>
                     <td className="px-4 py-3 text-right font-medium text-gray-800">
-                      ₹{po.total_value.toFixed(2)}
+                      ₹{(po.total_value ?? 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {new Date(po.created_at).toLocaleDateString()}

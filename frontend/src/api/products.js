@@ -1,10 +1,10 @@
 import api from './axios'
 
-export const getProducts = (params = {}) =>
-  api.get('/products', { params }).then((r) => r.data)
+export const getProducts = (params = {}, signal) =>
+  api.get('/products', { params, signal }).then((r) => r.data)
 
-export const getProduct = (id) =>
-  api.get(`/products/${id}`).then((r) => r.data)
+export const getProduct = (id, signal) =>
+  api.get(`/products/${id}`, { signal }).then((r) => r.data)
 
 export const createProduct = (data) =>
   api.post('/products', data).then((r) => r.data)

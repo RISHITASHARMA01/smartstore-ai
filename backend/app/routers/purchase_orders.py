@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import Optional
+from typing import Optional, List
 
 from ..database import get_db
 from ..models import PurchaseOrder, POLineItem, Product, Supplier, StockHistory
@@ -53,10 +53,23 @@ def get_purchase_order(po_id: int, db: Session = Depends(get_db)):
     return _load(po_id, db)
 
 
+def _validate_products(product_ids: List[int], db: Session) -> None:
+    found = {
+        p.id for p in db.query(Product.id)
+        .filter(Product.id.in_(product_ids), Product.is_active == True)
+        .all()
+    }
+    for pid in product_ids:
+        if pid not in found:
+            raise HTTPException(status_code=404, detail=f"Product {pid} not found")
+
+
 @router.post("/", response_model=POOut, status_code=201)
 def create_purchase_order(payload: POCreate, db: Session = Depends(get_db)):
     if not db.query(Supplier).filter(Supplier.id == payload.supplier_id, Supplier.is_active == True).first():
         raise HTTPException(status_code=404, detail="Supplier not found")
+
+    _validate_products([item.product_id for item in payload.line_items], db)
 
     po = PurchaseOrder(supplier_id=payload.supplier_id, notes=payload.notes)
     db.add(po)
@@ -64,8 +77,6 @@ def create_purchase_order(payload: POCreate, db: Session = Depends(get_db)):
 
     total = 0.0
     for item in payload.line_items:
-        if not db.query(Product).filter(Product.id == item.product_id, Product.is_active == True).first():
-            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
         db.add(POLineItem(po_id=po.id, **item.model_dump()))
         total += item.quantity * item.unit_price
 
@@ -86,11 +97,10 @@ def update_purchase_order(po_id: int, payload: POUpdate, db: Session = Depends(g
         po.notes = payload.notes
 
     if payload.line_items is not None:
+        _validate_products([item.product_id for item in payload.line_items], db)
         db.query(POLineItem).filter(POLineItem.po_id == po_id).delete(synchronize_session=False)
         total = 0.0
         for item in payload.line_items:
-            if not db.query(Product).filter(Product.id == item.product_id, Product.is_active == True).first():
-                raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
             db.add(POLineItem(po_id=po.id, **item.model_dump()))
             total += item.quantity * item.unit_price
         po.total_value = total
@@ -105,7 +115,10 @@ def advance_status(po_id: int, db: Session = Depends(get_db)):
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
 
-    idx = VALID_STATUSES.index(po.status)
+    try:
+        idx = VALID_STATUSES.index(po.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Purchase order has invalid status: {po.status}")
     if idx == len(VALID_STATUSES) - 1:
         raise HTTPException(status_code=400, detail="Purchase order is already Received")
 
@@ -113,8 +126,13 @@ def advance_status(po_id: int, db: Session = Depends(get_db)):
 
     # On receipt: restock each product and record history
     if po.status == "Received":
-        for li in db.query(POLineItem).filter(POLineItem.po_id == po_id).all():
-            product = db.query(Product).filter(Product.id == li.product_id).first()
+        for li in (
+            db.query(POLineItem)
+            .options(joinedload(POLineItem.product))
+            .filter(POLineItem.po_id == po_id)
+            .all()
+        ):
+            product = li.product
             if product:
                 product.stock_qty += li.quantity
                 db.add(StockHistory(

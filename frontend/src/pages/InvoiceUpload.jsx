@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import api from '../api/axios'
 
-const EMPTY_ITEM = () => ({ name: '', qty: 1, unit_price: 0, total: 0 })
+let _itemId = 0
+const EMPTY_ITEM = () => ({ id: ++_itemId, name: '', qty: 1, unit_price: 0, total: 0 })
 
 function calcTotal(items) {
   return items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.unit_price) || 0), 0)
@@ -38,6 +39,10 @@ export default function InvoiceUpload() {
       toast.error('Unsupported file type. Use JPG, PNG, or PDF.')
       return
     }
+    if (f.size > 10 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 10 MB.')
+      return
+    }
     setFile(f)
     setForm(null)
     setResult(null)
@@ -59,6 +64,7 @@ export default function InvoiceUpload() {
         supplier_name: data.supplier_name || '',
         invoice_date: data.invoice_date || '',
         line_items: (data.line_items || []).map((it) => ({
+          id: ++_itemId,
           name: it.name || '',
           qty: it.qty ?? 1,
           unit_price: it.unit_price ?? 0,
@@ -100,6 +106,15 @@ export default function InvoiceUpload() {
   // ── confirm ──────────────────────────────────────────────────────────────────
   async function handleConfirm() {
     if (!invoiceId || !form) return
+    if (!form.line_items.length) {
+      toast.error('Add at least one line item')
+      return
+    }
+    const invalid = form.line_items.filter((it) => !it.name.trim() || parseInt(it.qty) <= 0)
+    if (invalid.length) {
+      toast.error('All line items need a product name and quantity > 0')
+      return
+    }
     setConfirming(true)
     try {
       const { data } = await api.post(`/invoices/confirm/${invoiceId}`, {
@@ -139,6 +154,10 @@ export default function InvoiceUpload() {
         {/* Upload zone */}
         {!result && (
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Upload invoice file — click or drag and drop"
+            onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
@@ -246,7 +265,7 @@ export default function InvoiceUpload() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {form.line_items.map((it, idx) => (
-                      <tr key={idx}>
+                      <tr key={it.id}>
                         <td className="px-3 py-2">
                           <input
                             type="text"

@@ -16,7 +16,6 @@ class ProductCreate(BaseModel):
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=255)
     category: Optional[str] = Field(default=None, max_length=100)
-    stock_qty: Optional[int] = Field(default=None, ge=0)
     unit_price: Optional[float] = Field(default=None, gt=0)
     reorder_threshold: Optional[int] = Field(default=None, ge=0)
     expiry_date: Optional[datetime] = None

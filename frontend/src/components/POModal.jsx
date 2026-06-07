@@ -47,13 +47,19 @@ export default function POModal({ po, onClose }) {
   )
 
   useEffect(() => {
-    Promise.all([getSuppliers(), getProducts()])
+    const controller = new AbortController()
+    Promise.all([getSuppliers({}, controller.signal), getProducts({}, controller.signal)])
       .then(([s, p]) => {
         setSuppliers(s)
         setProducts(p)
       })
-      .catch(() => toast.error('Failed to load form data'))
+      .catch((err) => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          toast.error('Failed to load form data')
+        }
+      })
       .finally(() => setLoadingData(false))
+    return () => controller.abort()
   }, [])
 
   const handleProductChange = (index, productId) => {

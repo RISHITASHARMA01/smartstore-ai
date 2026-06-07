@@ -73,6 +73,7 @@ export default function Suppliers() {
             placeholder="Search by name or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search suppliers"
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -101,10 +102,10 @@ export default function Suppliers() {
                     <td className="px-4 py-3 text-gray-500">{s.email}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {s.categories.length === 0 ? (
+                        {(s.categories || []).length === 0 ? (
                           <span className="text-gray-400 text-xs">—</span>
                         ) : (
-                          s.categories.map((c) => (
+                          (s.categories || []).map((c) => (
                             <span
                               key={c}
                               className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium"

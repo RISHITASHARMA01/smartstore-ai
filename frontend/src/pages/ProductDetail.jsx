@@ -30,44 +30,46 @@ export default function ProductDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
 
-  const fetchProduct = useCallback(async () => {
+  const fetchProduct = useCallback(async (signal) => {
     try {
-      const data = await getProduct(id)
+      const data = await getProduct(id, signal)
       setProduct(data)
-    } catch {
-      toast.error('Failed to load product')
+    } catch (err) {
+      if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') toast.error('Failed to load product')
     } finally {
       setLoading(false)
     }
   }, [id])
 
-  const fetchForecast = useCallback(async () => {
+  const fetchForecast = useCallback(async (signal) => {
     try {
-      const { data } = await api.get(`/products/${id}/forecast`)
+      const { data } = await api.get(`/products/${id}/forecast`, { signal })
       setForecast(data.forecast || [])
-    } catch {
-      toast.error('Failed to load forecast')
+    } catch (err) {
+      if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') toast.error('Failed to load forecast')
     } finally {
       setForecastLoading(false)
     }
   }, [id])
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (signal) => {
     setHistoryLoading(true)
     try {
-      const { data } = await api.get(`/products/${id}/history`)
+      const { data } = await api.get(`/products/${id}/history`, { signal })
       setHistory(data)
-    } catch {
-      toast.error('Failed to load history')
+    } catch (err) {
+      if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') toast.error('Failed to load history')
     } finally {
       setHistoryLoading(false)
     }
   }, [id])
 
   useEffect(() => {
-    fetchProduct()
-    fetchForecast()
-    fetchHistory()
+    const controller = new AbortController()
+    fetchProduct(controller.signal)
+    fetchForecast(controller.signal)
+    fetchHistory(controller.signal)
+    return () => controller.abort()
   }, [fetchProduct, fetchForecast, fetchHistory])
 
   const handleAdjustClose = (refresh) => {
@@ -136,9 +138,9 @@ export default function ProductDetail() {
               { label: 'Category',          value: product.category },
               { label: 'Stock Quantity',     value: `${product.stock_qty} units`,         cls: isLow ? 'text-amber-600' : '' },
               { label: 'Reorder Threshold',  value: `${product.reorder_threshold} units` },
-              { label: 'Unit Price',         value: `₹${product.unit_price.toFixed(2)}` },
+              { label: 'Unit Price',         value: `₹${(product.unit_price ?? 0).toFixed(2)}` },
               { label: 'Expiry Date',        value: product.expiry_date ? new Date(product.expiry_date).toLocaleDateString() : '—', cls: isExpired ? 'text-red-500' : '' },
-              { label: 'Added On',           value: new Date(product.created_at).toLocaleDateString() },
+              { label: 'Added On',           value: product.created_at ? new Date(product.created_at).toLocaleDateString() : '—' },
             ].map(({ label, value, cls = '' }) => (
               <div key={label}>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>

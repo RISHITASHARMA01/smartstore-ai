@@ -3,7 +3,7 @@ import re
 import json
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from google.genai import types
 
 from ..database import get_db
 from ..auth.dependencies import get_current_user
+from ..config import settings
 from ..models import Invoice, Product, StockHistory
 
 logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ async def parse_invoice(
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=settings.gemini_model,
             contents=[
                 types.Part.from_bytes(data=file_bytes, mime_type=mime),
                 PARSE_PROMPT,
@@ -182,8 +183,12 @@ def confirm_invoice(
 
 # ── GET /invoices ─────────────────────────────────────────────────────────────
 @router.get("/")
-def list_invoices(db: Session = Depends(get_db)):
-    invoices = db.query(Invoice).order_by(Invoice.created_at.desc()).all()
+def list_invoices(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    invoices = db.query(Invoice).order_by(Invoice.created_at.desc()).offset(skip).limit(limit).all()
     return [
         {
             "id": inv.id,

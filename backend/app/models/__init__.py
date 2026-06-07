@@ -48,13 +48,13 @@ class PurchaseOrder(Base):
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
     updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
     supplier    = relationship("Supplier", back_populates="purchase_orders")
-    line_items  = relationship("POLineItem", back_populates="purchase_order")
+    line_items  = relationship("POLineItem", back_populates="purchase_order", cascade="all, delete-orphan")
 
 class POLineItem(Base):
     __tablename__ = "po_line_items"
     id               = Column(Integer, primary_key=True, index=True)
-    po_id            = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
-    product_id       = Column(Integer, ForeignKey("products.id"), nullable=False)
+    po_id            = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False, index=True)
+    product_id       = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     quantity         = Column(Integer, nullable=False)
     unit_price       = Column(Float, nullable=False)
     purchase_order   = relationship("PurchaseOrder", back_populates="line_items")
@@ -63,7 +63,7 @@ class POLineItem(Base):
 class StockHistory(Base):
     __tablename__ = "stock_history"
     id          = Column(Integer, primary_key=True, index=True)
-    product_id  = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_id  = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     user_id     = Column(Integer, ForeignKey("users.id"), nullable=True)
     change_qty  = Column(Integer, nullable=False)  # positive=restock, negative=sale
     change_type = Column(String, nullable=False)   # sale, restock, write_off, adjustment
@@ -112,7 +112,7 @@ class AuditLog(Base):
     """Immutable log of every significant action: who, what, when, from where."""
     __tablename__ = "audit_logs"
     id            = Column(Integer, primary_key=True, index=True)
-    user_id       = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action        = Column(String, nullable=False)   # create, update, delete, login, logout, failed_login
     resource_type = Column(String, nullable=True)    # product, supplier, purchase_order, user
     resource_id   = Column(Integer, nullable=True)

@@ -25,21 +25,29 @@ export default function Reports() {
   const [history, setHistory] = useState([])
   const [poSummary, setPoSummary] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
     Promise.all([
-      api.get('/reports/stock-by-category'),
-      api.get('/reports/low-stock'),
-      api.get('/reports/expiring-soon'),
-      api.get('/reports/stock-history'),
-      api.get('/reports/po-summary'),
+      api.get('/reports/stock-by-category', { signal }),
+      api.get('/reports/low-stock', { signal }),
+      api.get('/reports/expiring-soon', { signal }),
+      api.get('/reports/stock-history', { signal }),
+      api.get('/reports/po-summary', { signal }),
     ]).then(([cat, low, exp, hist, po]) => {
       setStockByCategory(cat.data)
       setLowStock(low.data)
       setExpiring(exp.data)
       setHistory(hist.data)
       setPoSummary(po.data)
+    }).catch((err) => {
+      if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+        setError('Failed to load analytics data')
+      }
     }).finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   if (loading) {
@@ -47,6 +55,16 @@ export default function Reports() {
       <Layout>
         <div className="p-6 flex items-center justify-center h-64">
           <p className="text-gray-400 text-sm">Loading analytics…</p>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-6 flex items-center justify-center h-64">
+          <p className="text-red-500 text-sm">{error}</p>
         </div>
       </Layout>
     )

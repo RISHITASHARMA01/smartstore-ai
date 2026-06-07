@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from ..database import get_db
 from ..models import Product, Supplier, StockHistory, PurchaseOrder
@@ -30,9 +30,10 @@ def get_stats(db: Session = Depends(get_db)):
     total_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.is_active == True).scalar()
 
     # recent stock movements (last 30 days)
+    thirty_days_ago = now - timedelta(days=30)
     recent_restocks = (
         db.query(func.coalesce(func.sum(StockHistory.change_qty), 0))
-        .filter(StockHistory.change_type == "restock")
+        .filter(StockHistory.change_type == "restock", StockHistory.recorded_at >= thirty_days_ago)
         .scalar()
     )
 

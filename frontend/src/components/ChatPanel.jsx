@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import api from '../api/axios'
 
+let _msgId = 0
+
 export default function ChatPanel() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
@@ -21,14 +23,14 @@ export default function ChatPanel() {
     setInput('')
     setError(null)
 
-    const userMsg = { role: 'user', content: text }
+    const userMsg = { id: ++_msgId, role: 'user', content: text }
     const updated = [...messages, userMsg]
     setMessages(updated)
     setThinking(true)
 
     try {
       const { data } = await api.post('/ai/chat', { messages: updated })
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }])
+      setMessages((prev) => [...prev, { id: ++_msgId, role: 'assistant', content: data.response }])
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -69,8 +71,8 @@ export default function ChatPanel() {
                 Ask me about stock levels, expiring items, suppliers, or purchase orders.
               </p>
             )}
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {messages.map((m) => (
+              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                     m.role === 'user'
@@ -108,6 +110,7 @@ export default function ChatPanel() {
               onKeyDown={handleKey}
               placeholder="Ask about your inventory…"
               disabled={thinking}
+              aria-label="Chat message input"
               className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
             <button

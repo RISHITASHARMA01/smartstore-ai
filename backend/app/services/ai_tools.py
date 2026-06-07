@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..models import Product, PurchaseOrder, Supplier, POLineItem, StockHistory
 
@@ -25,9 +26,9 @@ def get_low_stock_products(db: Session, threshold_pct: int = 20):
 
 def get_product_detail(db: Session, product_id: int = None, product_name: str = None):
     if product_id is not None:
-        product = db.query(Product).filter(Product.id == product_id).first()
+        product = db.query(Product).filter(Product.id == product_id, Product.is_active == True).first()
     elif product_name:
-        product = db.query(Product).filter(Product.name.ilike(f"%{product_name}%")).first()
+        product = db.query(Product).filter(Product.name.ilike(f"%{product_name}%"), Product.is_active == True).first()
     else:
         return {"error": "Must provide product_id or product_name"}
 
@@ -58,22 +59,26 @@ def get_po_history(db: Session, supplier_name: str = None, days: int = 30):
     if supplier_name:
         q = q.filter(Supplier.name.ilike(f"%{supplier_name}%"))
 
-    results = []
-    for po, supplier in q.all():
-        line_items_count = (
-            db.query(POLineItem).filter(POLineItem.po_id == po.id).count()
-        )
-        results.append(
-            {
-                "id": po.id,
-                "supplier_name": supplier.name,
-                "status": po.status,
-                "total_value": po.total_value,
-                "created_at": po.created_at.isoformat() if po.created_at else None,
-                "line_items_count": line_items_count,
-            }
-        )
-    return results
+    rows = q.all()
+    po_ids = [po.id for po, _ in rows]
+    counts = dict(
+        db.query(POLineItem.po_id, func.count(POLineItem.id))
+        .filter(POLineItem.po_id.in_(po_ids))
+        .group_by(POLineItem.po_id)
+        .all()
+    ) if po_ids else {}
+
+    return [
+        {
+            "id": po.id,
+            "supplier_name": supplier.name,
+            "status": po.status,
+            "total_value": po.total_value,
+            "created_at": po.created_at.isoformat() if po.created_at else None,
+            "line_items_count": counts.get(po.id, 0),
+        }
+        for po, supplier in rows
+    ]
 
 
 def get_expiring_products(db: Session, days_ahead: int = 14):

@@ -7,17 +7,30 @@ import api from '../api/axios'
 export default function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.get('/dashboard/stats')
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+    api.get('/dashboard/stats', { signal: controller.signal })
       .then((r) => setStats(r.data))
-      .catch(() => {})
+      .catch((err) => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          setError('Failed to load dashboard stats')
+        }
+      })
+      .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
+
+  const dash = loading ? null : stats
 
   const cards = [
     {
       label: 'Total Products',
-      value: stats?.total_products ?? '—',
+      value: loading ? '…' : (dash?.total_products ?? '—'),
       color: 'text-blue-600',
       bg: 'bg-blue-50',
       icon: '📦',
@@ -25,23 +38,23 @@ export default function Dashboard() {
     },
     {
       label: 'Low Stock Alerts',
-      value: stats?.low_stock_alerts ?? '—',
-      color: stats?.low_stock_alerts > 0 ? 'text-red-600' : 'text-green-600',
-      bg: stats?.low_stock_alerts > 0 ? 'bg-red-50' : 'bg-green-50',
+      value: loading ? '…' : (dash?.low_stock_alerts ?? '—'),
+      color: dash?.low_stock_alerts > 0 ? 'text-red-600' : 'text-green-600',
+      bg: dash?.low_stock_alerts > 0 ? 'bg-red-50' : 'bg-green-50',
       icon: '⚠️',
       link: '/reports',
     },
     {
       label: 'Expired Items',
-      value: stats?.expired_items ?? '—',
-      color: stats?.expired_items > 0 ? 'text-orange-600' : 'text-green-600',
-      bg: stats?.expired_items > 0 ? 'bg-orange-50' : 'bg-green-50',
+      value: loading ? '…' : (dash?.expired_items ?? '—'),
+      color: dash?.expired_items > 0 ? 'text-orange-600' : 'text-green-600',
+      bg: dash?.expired_items > 0 ? 'bg-orange-50' : 'bg-green-50',
       icon: '🕒',
       link: '/reports',
     },
     {
       label: 'Suppliers',
-      value: stats?.total_suppliers ?? '—',
+      value: loading ? '…' : (dash?.total_suppliers ?? '—'),
       color: 'text-purple-600',
       bg: 'bg-purple-50',
       icon: '🏭',
@@ -56,6 +69,12 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">Welcome back — here's your store overview</p>
         </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {cards.map((card) => (

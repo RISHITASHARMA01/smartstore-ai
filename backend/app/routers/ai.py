@@ -12,6 +12,7 @@ from google.genai import types
 
 from ..database import get_db
 from ..auth.dependencies import get_current_user
+from ..config import settings
 from ..services.ai_tools import (
     get_low_stock_products,
     get_product_detail,
@@ -164,7 +165,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)):
         last_message = messages[-1].content
 
         chat_session = client.chats.create(
-            model="gemini-2.5-flash",
+            model=settings.gemini_model,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 tools=GEMINI_TOOLS,
@@ -192,6 +193,8 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)):
 
             response = chat_session.send_message(result_parts)
 
+    except HTTPException:
+        raise
     except Exception as e:
         err = str(e)
         logger.error("Gemini chat error: %s", err)

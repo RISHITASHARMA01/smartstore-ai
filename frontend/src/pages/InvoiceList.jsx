@@ -10,10 +10,16 @@ export default function InvoiceList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/invoices/')
+    const controller = new AbortController()
+    api.get('/invoices/', { signal: controller.signal })
       .then((r) => setInvoices(r.data))
-      .catch(() => toast.error('Failed to load invoices'))
+      .catch((err) => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          toast.error('Failed to load invoices')
+        }
+      })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   return (
