@@ -223,6 +223,69 @@ docker compose exec backend alembic upgrade head
 
 ---
 
+### Changing ports (if defaults are already in use)
+
+If ports `3000` or `8000` are occupied on your machine, change the host-side port numbers in `docker-compose.yml` and update `.env` to match.
+
+**Example — move frontend to 3001, backend to 8080:**
+
+**bash**
+```bash
+# 1. Edit docker-compose.yml
+sed -i 's/"3000:80"/"3001:80"/' docker-compose.yml
+sed -i 's/"8000:8000"/"8080:8000"/' docker-compose.yml
+
+# 2. Update .env
+sed -i 's|VITE_API_URL=http://localhost:8000|VITE_API_URL=http://localhost:8080|' .env
+sed -i 's|ALLOWED_ORIGINS=http://localhost:3000|ALLOWED_ORIGINS=http://localhost:3001|' .env
+
+# 3. Rebuild and restart (Vite bakes VITE_API_URL at build time)
+docker compose down
+docker compose up --build -d
+```
+
+**PowerShell**
+```powershell
+# 1. Edit docker-compose.yml
+(Get-Content docker-compose.yml) -replace '"3000:80"', '"3001:80"' `
+  -replace '"8000:8000"', '"8080:8000"' |
+  Set-Content docker-compose.yml
+
+# 2. Update .env
+(Get-Content .env) `
+  -replace 'VITE_API_URL=http://localhost:8000', 'VITE_API_URL=http://localhost:8080' `
+  -replace 'ALLOWED_ORIGINS=http://localhost:3000', 'ALLOWED_ORIGINS=http://localhost:3001' |
+  Set-Content .env
+
+# 3. Rebuild and restart (Vite bakes VITE_API_URL at build time)
+docker compose down
+docker compose up --build -d
+```
+
+Your app will then be at:
+
+| Service  | URL |
+|----------|-----|
+| Frontend | http://localhost:3001 |
+| Backend  | http://localhost:8080 |
+| API Docs | http://localhost:8080/docs |
+
+> **Only change the number before the colon.** The number after the colon is the internal container port — leave it as-is.
+
+To find which ports are already in use:
+
+**bash**
+```bash
+ss -tlnp | grep -E ':(3000|8000)'
+```
+
+**PowerShell**
+```powershell
+netstat -ano | Select-String ':3000|:8000'
+```
+
+---
+
 ## Project Structure
 
 ```

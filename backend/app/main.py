@@ -89,12 +89,14 @@ async def security_and_logging(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # CSP — blocks inline scripts/styles injected by XSS
     api_origin = os.getenv("API_URL", "http://localhost:8000")
+    request_origin = f"{request.url.scheme}://{request.url.hostname}:{request.url.port}"
+    connect_src = " ".join({api_origin, request_origin, "http://localhost:8000"})
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline'; "   # unsafe-inline needed for Vite dev HMR
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
-        f"connect-src 'self' {api_origin} https://generativelanguage.googleapis.com; "
+        f"connect-src 'self' {connect_src} https://generativelanguage.googleapis.com; "
         "font-src 'self' data:; "
         "frame-ancestors 'none';"
     )
