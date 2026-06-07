@@ -9,6 +9,7 @@ import Suppliers from './pages/Suppliers'
 import PurchaseOrders from './pages/PurchaseOrders'
 import InvoiceList from './pages/InvoiceList'
 import InvoiceUpload from './pages/InvoiceUpload'
+import Reports from './pages/Reports'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
@@ -71,6 +72,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <InvoiceUpload />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
             </ProtectedRoute>
           }
         />

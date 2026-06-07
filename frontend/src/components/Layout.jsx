@@ -7,6 +7,7 @@ const navItems = [
   { to: '/suppliers', label: 'Suppliers' },
   { to: '/purchase-orders', label: 'Purchase Orders' },
   { to: '/invoices', label: 'Invoices' },
+  { to: '/reports', label: 'Reports' },
 ]
 
 export default function Layout({ children }) {

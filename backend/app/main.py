@@ -7,6 +7,8 @@ from .routers import purchase_orders as po_router
 from .routers.ai import router as ai_router
 from .routers.forecast import router as forecast_router
 from .routers.invoices import router as invoices_router
+from .routers.dashboard import router as dashboard_router
+from .routers.reports import router as reports_router
 
 app = FastAPI(title="SmartStore AI", version="1.0.0")
 
@@ -25,6 +27,8 @@ app.include_router(po_router.router)
 app.include_router(ai_router, prefix="/ai", tags=["ai"])
 app.include_router(forecast_router, tags=["forecast"])
 app.include_router(invoices_router, prefix="/invoices", tags=["invoices"])
+app.include_router(dashboard_router)
+app.include_router(reports_router)
 
 
 @app.get("/")
