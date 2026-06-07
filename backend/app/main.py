@@ -93,9 +93,9 @@ async def security_and_logging(request: Request, call_next):
     connect_src = " ".join({api_origin, request_origin, "http://localhost:8000"})
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "   # unsafe-inline needed for Vite dev HMR
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob:; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: blob: https://fastapi.tiangolo.com; "
         f"connect-src 'self' {connect_src} https://generativelanguage.googleapis.com; "
         "font-src 'self' data:; "
         "frame-ancestors 'none';"
