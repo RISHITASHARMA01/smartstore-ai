@@ -49,28 +49,48 @@ An AI-powered inventory management system built with FastAPI + React. Manage pro
 
 ## Local Setup
 
+> **Windows users:** A one-command setup script is available — see [PowerShell Quick Start](#powershell-quick-start-windows) below, or follow the step-by-step instructions with the PowerShell equivalents shown in each section.
+
 ### 1. Clone and configure
 
+**bash / macOS / Linux**
 ```bash
 git clone https://github.com/RISHITASHARMA01/smartstore-ai.git
 cd smartstore-ai
+cp .env.example .env
 ```
 
-Copy and fill in the env file at the project root:
-
-```bash
-cp .env.example .env
+**PowerShell (Windows)**
+```powershell
+git clone https://github.com/RISHITASHARMA01/smartstore-ai.git
+Set-Location smartstore-ai
+Copy-Item .env.example .env
 ```
 
 Then edit `.env` — the two values you must set:
 
 ```env
-SECRET_KEY=<run: python -c "import secrets; print(secrets.token_hex(32))">
+SECRET_KEY=<generate below>
 GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
+Generate a secure `SECRET_KEY`:
+
+**bash**
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+**PowerShell**
+```powershell
+.\scripts\generate-secret.ps1
+```
+
+---
+
 ### 2. Start PostgreSQL
 
+**bash**
 ```bash
 docker run -d \
   --name smartstore-db \
@@ -80,25 +100,63 @@ docker run -d \
   postgres:15-alpine
 ```
 
+**PowerShell**
+```powershell
+docker run -d `
+  --name smartstore-db `
+  -e POSTGRES_PASSWORD=password `
+  -e POSTGRES_DB=smartstore `
+  -p 5432:5432 `
+  postgres:15-alpine
+```
+
+---
+
 ### 3. Backend
 
+**bash**
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 cd ..
-alembic upgrade head             # run migrations (alembic.ini is at project root)
+alembic upgrade head
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs available at http://localhost:8000/docs
+**PowerShell**
+```powershell
+Set-Location backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Set-Location ..
+alembic upgrade head
+Set-Location backend
+uvicorn app.main:app --reload --port 8000
+```
+
+> If PowerShell blocks script execution, run once:
+> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+API docs: http://localhost:8000/docs
+
+---
 
 ### 4. Frontend
 
+**bash**
 ```bash
 cd frontend
+npm install
+npm run dev
+```
+
+**PowerShell**
+```powershell
+Set-Location frontend
 npm install
 npm run dev
 ```
@@ -107,12 +165,46 @@ Open http://localhost:5173 — register a new account and log in.
 
 ---
 
+## PowerShell Quick Start (Windows)
+
+One script handles the full setup — Python venv, dependencies, PostgreSQL container, migrations, and npm install:
+
+```powershell
+# Allow local scripts (one-time, first run only)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Full setup
+.\scripts\setup.ps1
+
+# Then start each server in a separate terminal:
+.\scripts\start-backend.ps1
+.\scripts\start-frontend.ps1
+```
+
+### Available PowerShell scripts
+
+| Script | What it does |
+|--------|-------------|
+| `.\scripts\setup.ps1` | Full first-time setup — venv, pip install, PostgreSQL, migrations, npm install |
+| `.\scripts\start-backend.ps1` | Start FastAPI backend with auto-reload on http://localhost:8000 |
+| `.\scripts\start-frontend.ps1` | Start Vite dev server with HMR on http://localhost:5173 |
+| `.\scripts\migrate.ps1` | Run `alembic upgrade head` (apply pending migrations) |
+| `.\scripts\migrate.ps1 -Message "add_table"` | Generate a new Alembic migration |
+| `.\scripts\generate-secret.ps1` | Generate a cryptographically secure `SECRET_KEY` |
+
+---
+
 ## Docker Compose (one-command startup)
 
+**bash**
 ```bash
-# Copy and fill in the env file first
-cp .env.example .env   # then set SECRET_KEY and GEMINI_API_KEY
+cp .env.example .env   # set SECRET_KEY and GEMINI_API_KEY
+docker compose up --build
+```
 
+**PowerShell**
+```powershell
+Copy-Item .env.example .env   # set SECRET_KEY and GEMINI_API_KEY
 docker compose up --build
 ```
 
@@ -124,6 +216,7 @@ docker compose up --build
 
 Run migrations inside the container after first start:
 
+**bash / PowerShell**
 ```bash
 docker compose exec backend alembic upgrade head
 ```
@@ -160,6 +253,12 @@ smartstore-ai/
 │   │   ├── api/              # Axios instance + typed helpers
 │   │   └── store/            # Zustand auth store
 │   └── Dockerfile
+├── scripts/                  # PowerShell helper scripts (Windows)
+│   ├── setup.ps1             # Full first-time setup
+│   ├── start-backend.ps1     # Start FastAPI dev server
+│   ├── start-frontend.ps1    # Start Vite dev server
+│   ├── migrate.ps1           # Run / generate Alembic migrations
+│   └── generate-secret.ps1  # Generate SECRET_KEY
 ├── docs/                     # Sample invoices for testing OCR
 └── docker-compose.yml
 ```
@@ -176,6 +275,7 @@ Key endpoints:
 |--------|------|-------------|
 | POST | `/auth/register` | Create account |
 | POST | `/auth/login` | Get access + refresh tokens |
+| POST | `/auth/logout` | Revoke current token |
 | GET | `/products/` | List products (search, category, low_stock filters) |
 | POST | `/products/{id}/adjust` | Record sale / restock / write-off / adjustment |
 | GET | `/products/{id}/history` | Stock movement log for a product |
