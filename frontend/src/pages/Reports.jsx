@@ -133,7 +133,7 @@ export default function Reports() {
                   {stockByCategory.map((r, i) => (
                     <div key={r.category} className="flex items-center gap-2 text-xs">
                       <span
-                        className="w-3 h-3 rounded-sm shrink-0"
+                        className="w-3 h-3 rounded-xs shrink-0"
                         style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
                       />
                       <span className="text-gray-700 truncate">{r.category}</span>

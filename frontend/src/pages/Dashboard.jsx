@@ -62,7 +62,7 @@ export default function Dashboard() {
             <button
               key={card.label}
               onClick={() => navigate(card.link)}
-              className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 text-left hover:shadow-md transition group"
+              className="bg-white rounded-xl shadow-xs p-5 border border-gray-100 text-left hover:shadow-md transition group"
             >
               <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg ${card.bg} mb-3`}>
                 <span className="text-xl">{card.icon}</span>

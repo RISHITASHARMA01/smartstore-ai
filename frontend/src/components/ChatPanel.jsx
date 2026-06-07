@@ -74,8 +74,8 @@ export default function ChatPanel() {
                 <div
                   className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                     m.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                      ? 'bg-blue-600 text-white rounded-br-xs'
+                      : 'bg-gray-100 text-gray-800 rounded-bl-xs'
                   }`}
                 >
                   {m.content}
@@ -84,7 +84,7 @@ export default function ChatPanel() {
             ))}
             {thinking && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 text-gray-500 px-3 py-2 rounded-2xl rounded-bl-sm text-sm italic">
+                <div className="bg-gray-100 text-gray-500 px-3 py-2 rounded-2xl rounded-bl-xs text-sm italic">
                   SmartStore AI is thinking...
                 </div>
               </div>
