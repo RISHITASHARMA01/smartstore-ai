@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..auth.dependencies import get_current_user
+from ..auth.bypass import get_user_dependency
+get_current_user = get_user_dependency()
 from ..services.forecast import get_demand_forecast
 
 router = APIRouter(

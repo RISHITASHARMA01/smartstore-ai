@@ -11,7 +11,8 @@ from google import genai
 from google.genai import types
 
 from ..database import get_db
-from ..auth.dependencies import get_current_user
+from ..auth.bypass import get_user_dependency
+get_current_user = get_user_dependency()
 from ..config import settings
 from ..services.ai_tools import (
     get_low_stock_products,

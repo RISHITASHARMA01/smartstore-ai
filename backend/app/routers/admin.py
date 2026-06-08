@@ -6,7 +6,9 @@ from typing import Optional
 from ..database import get_db
 from ..models import User
 from ..schemas.auth import UserOut
-from ..auth.dependencies import get_current_user, require_admin
+from ..auth.bypass import get_user_dependency, require_admin_dependency
+get_current_user = get_user_dependency()
+require_admin = require_admin_dependency()
 
 router = APIRouter(
     prefix="/admin/users",

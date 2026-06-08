@@ -20,7 +20,8 @@ from ..auth.utils import (
     create_refresh_token,
     decode_token,
 )
-from ..auth.dependencies import get_current_user
+from ..auth.bypass import get_user_dependency
+get_current_user = get_user_dependency()
 from ..rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
