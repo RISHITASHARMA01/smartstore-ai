@@ -1,4 +1,6 @@
-AUTH_BYPASS = True  # Set to False to re-enable auth
+import os
+
+AUTH_BYPASS = os.getenv("AUTH_BYPASS", "true").lower() == "true"
 
 from .dependencies import get_current_user, get_current_user_bypass, require_admin
 

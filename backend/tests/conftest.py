@@ -1,3 +1,6 @@
+import os
+os.environ["AUTH_BYPASS"] = "false"  # always use real auth in tests
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
