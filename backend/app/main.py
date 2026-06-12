@@ -27,6 +27,7 @@ from .routers.forecast import router as forecast_router
 from .routers.invoices import router as invoices_router
 from .routers.dashboard import router as dashboard_router
 from .routers.reports import router as reports_router
+from .routers.recommendations import router as recommendations_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -132,6 +133,7 @@ app.include_router(forecast_router, tags=["forecast"])
 app.include_router(invoices_router, prefix="/invoices", tags=["invoices"])
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+app.include_router(recommendations_router)
 
 
 @app.websocket("/ws")

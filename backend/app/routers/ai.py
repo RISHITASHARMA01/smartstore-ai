@@ -19,6 +19,7 @@ from ..services.ai_tools import (
     get_product_detail,
     get_po_history,
     get_expiring_products,
+    get_restock_recommendations,
 )
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -92,6 +93,24 @@ _TOOL_DECLARATIONS = [
                 "days_ahead": types.Schema(
                     type=types.Type.INTEGER,
                     description="Number of days ahead to check for expiry. Default is 14.",
+                )
+            },
+        ),
+    ),
+    types.FunctionDeclaration(
+        name="get_restock_recommendations",
+        description=(
+            "Get AI-ready restock recommendation data: products sorted by urgency with "
+            "sales velocity and estimated days of stock remaining. Use this to answer "
+            "questions like 'what should I restock?', 'which products need attention?', "
+            "or 'give me buying recommendations'."
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "limit": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="Max number of products to return. Default 10, max 20.",
                 )
             },
         ),
@@ -228,4 +247,7 @@ def _run_tool(name: str, inputs: dict, db: Session):
     if name == "get_expiring_products":
         safe = {"days_ahead": max(1, min(365, int(inputs.get("days_ahead", 14))))}
         return get_expiring_products(db, **safe)
+    if name == "get_restock_recommendations":
+        safe = {"limit": max(1, min(20, int(inputs.get("limit", 10))))}
+        return get_restock_recommendations(db, **safe)
     return {"error": "Unknown tool"}

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import Layout from '../components/Layout'
 import ProductModal from '../components/ProductModal'
 import StockAdjustModal from '../components/StockAdjustModal'
+import RecommendationPanel from '../components/RecommendationPanel'
 import { getProduct } from '../api/products'
 import api from '../api/axios'
 
@@ -154,8 +155,9 @@ export default function ProductDetail() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="flex border-b border-gray-200">
             {[
-              { key: 'forecast', label: '7-Day Forecast' },
-              { key: 'history',  label: 'Stock History' },
+              { key: 'forecast',        label: '7-Day Forecast' },
+              { key: 'history',         label: 'Stock History' },
+              { key: 'recommendations', label: 'AI Recommendations' },
             ].map((t) => (
               <button
                 key={t.key}
@@ -244,6 +246,10 @@ export default function ProductDetail() {
                   </table>
                 </div>
               )
+            )}
+
+            {tab === 'recommendations' && (
+              <RecommendationPanel productId={Number(id)} />
             )}
           </div>
         </div>

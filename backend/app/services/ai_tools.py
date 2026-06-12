@@ -4,6 +4,53 @@ from sqlalchemy.orm import Session
 from ..models import Product, PurchaseOrder, Supplier, POLineItem, StockHistory
 
 
+def get_restock_recommendations(db: Session, limit: int = 10):
+    """Return urgency-sorted restock data for the AI chat to reason about."""
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+
+    products = db.query(Product).filter(Product.is_active == True).all()
+    product_ids = [p.id for p in products]
+
+    sales_map = {}
+    if product_ids:
+        sales_map = dict(
+            db.query(StockHistory.product_id, func.sum(func.abs(StockHistory.change_qty)))
+            .filter(
+                StockHistory.change_type == "sale",
+                StockHistory.recorded_at >= thirty_days_ago,
+                StockHistory.product_id.in_(product_ids),
+            )
+            .group_by(StockHistory.product_id)
+            .all()
+        )
+
+    items = []
+    for p in products:
+        sales_30d = int(sales_map.get(p.id, 0))
+        daily_vel = sales_30d / 30
+        days_of_stock = round(p.stock_qty / daily_vel, 1) if daily_vel > 0 else None
+        items.append({
+            "id": p.id,
+            "name": p.name,
+            "sku": p.sku,
+            "category": p.category,
+            "stock_qty": p.stock_qty,
+            "reorder_threshold": p.reorder_threshold,
+            "unit_price": float(p.unit_price) if p.unit_price else 0,
+            "sales_last_30_days": sales_30d,
+            "daily_sales_velocity": round(daily_vel, 2),
+            "estimated_days_of_stock": days_of_stock,
+            "is_low_stock": p.stock_qty <= p.reorder_threshold,
+        })
+
+    items.sort(key=lambda x: (
+        0 if x["is_low_stock"] else 1,
+        x["estimated_days_of_stock"] if x["estimated_days_of_stock"] is not None else 9999,
+    ))
+    return items[:max(1, min(limit, 20))]
+
+
 def get_low_stock_products(db: Session, threshold_pct: int = 20):
     products = (
         db.query(Product)
