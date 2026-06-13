@@ -22,7 +22,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
-@router.get("/", response_model=list[UserOut])
+@router.get("", response_model=list[UserOut])
 def list_users(
     search: Optional[str] = Query(None),
     skip: int = Query(default=0, ge=0),

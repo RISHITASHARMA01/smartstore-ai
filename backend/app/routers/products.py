@@ -17,7 +17,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[ProductOut])
+@router.get("", response_model=list[ProductOut])
 def list_products(
     search: Optional[str] = Query(None, max_length=100),
     category: Optional[str] = Query(None, max_length=100),
@@ -50,7 +50,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     return product
 
 
-@router.post("/", response_model=ProductOut, status_code=201)
+@router.post("", response_model=ProductOut, status_code=201)
 def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
     if db.query(Product).filter(Product.sku == payload.sku).first():
         raise HTTPException(status_code=400, detail="SKU already exists")

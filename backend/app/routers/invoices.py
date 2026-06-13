@@ -190,7 +190,7 @@ async def confirm_invoice(
 
 
 # ── GET /invoices ─────────────────────────────────────────────────────────────
-@router.get("/")
+@router.get("")
 def list_invoices(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),

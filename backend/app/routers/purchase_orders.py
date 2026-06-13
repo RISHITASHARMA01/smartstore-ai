@@ -30,7 +30,7 @@ def _load(po_id: int, db: Session) -> PurchaseOrder:
     return po
 
 
-@router.get("/", response_model=list[POOut])
+@router.get("", response_model=list[POOut])
 def list_purchase_orders(
     status: Optional[str] = Query(None),
     supplier_id: Optional[int] = Query(None),
@@ -65,7 +65,7 @@ def _validate_products(product_ids: List[int], db: Session) -> None:
             raise HTTPException(status_code=404, detail=f"Product {pid} not found")
 
 
-@router.post("/", response_model=POOut, status_code=201)
+@router.post("", response_model=POOut, status_code=201)
 def create_purchase_order(payload: POCreate, db: Session = Depends(get_db)):
     if not db.query(Supplier).filter(Supplier.id == payload.supplier_id, Supplier.is_active == True).first():
         raise HTTPException(status_code=404, detail="Supplier not found")

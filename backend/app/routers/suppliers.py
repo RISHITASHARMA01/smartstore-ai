@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SupplierOut])
+@router.get("", response_model=list[SupplierOut])
 def list_suppliers(
     search: Optional[str] = Query(None),
     skip: int = 0,
@@ -42,7 +42,7 @@ def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
     return supplier
 
 
-@router.post("/", response_model=SupplierOut, status_code=201)
+@router.post("", response_model=SupplierOut, status_code=201)
 def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db)):
     if db.query(Supplier).filter(Supplier.email == payload.email, Supplier.is_active == True).first():
         raise HTTPException(status_code=400, detail="A supplier with this email already exists")
